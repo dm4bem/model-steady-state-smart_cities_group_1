@@ -98,7 +98,7 @@ GLW = 1 / (1 / GLW1 + 1 / GLW12 + 1 / GLW2) #conductance for radiative long-wave
 # ventilation flow rate
 from Inputs import ACH
 Va = l**3                   # m³, volume of air
-    Va_dot = ACH / 3600 * Va    # m³/s, air infiltration
+Va_dot = ACH / 3600 * Va    # m³/s, air infiltration
 
 # ventilation & advection
 Gv = air['Density'] * air['Specific heat'] * Va_dot  #conductance for advection by ventilation/infiltration
