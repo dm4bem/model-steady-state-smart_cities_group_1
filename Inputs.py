@@ -7,13 +7,23 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import dm4bem
 
-start_date = '02-01 01:00:00'
-end_date = '02-01 22:00:00'
+l = 3               # m length of the cubic room
+
+start_date = '01-01 00:00:00'
+end_date   = '01-03 00:00:00'
+
+controller= True
+neglect_air_glass_capacity = False
+θ0 = 0                                  # initial temperatures
+
+To_ss    = 10
+Ti_sp_ss = 20
+Ti_day, Ti_night = 20, 16
+
+ACH = 0.5                               # 1/h, air changes per hour
 
 start_date = '2000-' + start_date
 end_date = '2000-' + end_date
-print(f'{start_date} \tstart date')
-print(f'{end_date} \tend date')
 
 # loading the EPW-file
 filename = 'FRA_AR_Grenoble.074850_TMYx.epw'
@@ -26,13 +36,33 @@ weather = weather.loc[start_date:end_date]
 
 To = weather['temp_air']
 
-wall_out = pd.read_csv('walls_out.csv')
+# β     = slope
+# γ     = azimuth (0=south, 90=east)
+# h0    = convection coefficent inside
+# h1    = convection coefficent outside
+# α_i   = short wave absortivity inside (white smooth surface)
+# α_o   = short wave absortivity outside 
+# ε_lw  = long wave emmisivity (concrete)
+# τ     = short wave transmitance
+columns = ['ID',  'Area', 'β', 'γ', 'h0', 'h1', 'α_i', 'α_o', 'ε_lw', 'τ', 'albedo']
+wall_data = [
+          ['ws',     9,   90,    0,   25,   8,   0.25,  0.30, 0.85,     0,   2],
+          ['we',     9,   90,   90,   25,   8,   0.25,  0.30, 0.85,     0,   2],
+          ['ww',     9,   90,  270,   25,   8,   0.25,  0.30, 0.85,     0,   2],
+          ['window', 9,   90,  180,   25,   8,   0.00,  0.38, 0.90,  0.30,   2],
+          ['roof',   9,    0,    0,   25,   8,   0.25,  0.30, 0.85,     0,   2],
+          ['floor',  9,    0,    0,   25,   8,   0.25,  0.30, 0.85,     0,   2]
+]
+wall_out = pd.DataFrame(wall_data, columns=columns)
 
-total_wall_radiation = {}
-absorbed_wall_radiation = {}
+
+radiation = {}
+absorbed_radiation = {}
+Etot = pd.Series(0, index=weather.index)
+
 
 #calculating the solar irradiance for every wall except the window
-for wall_id in ['we', 'ws', 'ww', 'roof']:
+for wall_id in ['ws', 'we', 'ww', 'window', 'roof', 'floor']:
     wall_data = wall_out[wall_out['ID'] == wall_id]
     wall_orientation = {
         'slope': wall_data['β'].values[0],
@@ -40,75 +70,26 @@ for wall_id in ['we', 'ws', 'ww', 'roof']:
         'latitude': 45
     }
 
-    #total solar irradiance
+    #total solar irradiance walls
     rad_surf = dm4bem.sol_rad_tilt_surf(weather, wall_orientation, wall_data['albedo'].values[0])
-    Etot = rad_surf.sum(axis=1)
-    total_wall_radiation[wall_id] = Etot
+    E     = rad_surf.sum(axis=1)
+    radiation[wall_id] = E
+    
+    Etot += E
+    
+    # absorbed solar irradiance walls
+    absorbed_radiation[wall_id] = wall_data['α_o'].values[0] * wall_data['Area'].values[0] * E
 
-    # absorbed solar irradiance
-    Φo = wall_data['α1'].values[0] * wall_data['Area'].values[0] * Etot
-    absorbed_wall_radiation[wall_id] = Φo
+# solar radiation absorbed by the indoor surface
+window_data = wall_out[wall_out['ID']=='window']
 
-""""""""
-# window glass properties
-α_gSW = 0.38    # short wave absortivity: reflective blue glass
-τ_gSW = 0.30    # short wave transmitance: reflective blue glass
-S_g = 9         # m², surface area of glass
+Φo = absorbed_radiation['ws']+absorbed_radiation['we']+absorbed_radiation['ww']+absorbed_radiation['roof']
+Φi = window_data['τ'].values[0] * window_data['Area'].values[0] * radiation['window']* 0.25  #wrong!!
+Φa = absorbed_radiation['window']
 
-# total solar irradiance window
-window = wall_out[wall_out['ID'] == 'wn']
-
-surface_orientation = {'slope': window['β'].values[0],
-                       'azimuth': window['γ'].values[0],
-                       'latitude': 45}
-
-rad_surf = dm4bem.sol_rad_tilt_surf(
-    weather, surface_orientation, window['albedo'].values[0])
-
-Etot_window = rad_surf.sum(axis=1)
-
-# solar radiation absorbed by the indoor surface of the wall
-window_data = wall_out[wall_out['ID']=='wn']
-Φi = τ_gSW * window_data['α0'].values[0] * S_g * Etot
-
-# solar radiation absorbed by the glass
-Φa = α_gSW * S_g * Etot_window
-
-""""""
-#Plot der totalen und absorbierten Wandstrahlung für jede Wand
-plt.figure(figsize=(12, 8))
-
-# Plot der totalen Wandstrahlung
-plt.subplot(2, 1, 1)
-for wall_id, Etot in total_wall_radiation.items():
-    plt.plot(Etot.index, Etot.values, label=f'{wall_id} - Total Radiation')
-plt.plot(Etot_window.index, Etot_window.values, label="Window - Total Radiation")
-plt.xlabel('Time')
-plt.ylabel('Total Radiation (W/m²)')
-plt.title('Total Solar Radiation for Each Wall')
-plt.legend()
-
-# Plot der absorbierten Wandstrahlung
-plt.subplot(2, 1, 2)
-for wall_id, Φo in absorbed_wall_radiation.items():
-    plt.plot(Φo.index, Φo.values, label=f'{wall_id} - Absorbed Radiation')
-plt.plot(Φi.index, Φi, label="Φi - Absorbed Radiation inside")
-plt.plot(Φa.index, Φa, label="Φa - Absorbed Radiation Window")
-
-plt.xlabel('Time')
-plt.ylabel('Absorbed Radiation (W)')
-plt.title('Absorbed Solar Radiation for Each Wall')
-plt.legend()
-
-plt.tight_layout()
-plt.show()
-""""""
 #Schedules
-
 # indoor air temperature set-point
 Ti_sp = pd.Series(20, index=To.index)
-
-Ti_day, Ti_night = 20, 16
 Ti_sp = pd.Series(
     [Ti_day if 6 <= hour <= 22 else Ti_night for hour in To.index.hour],
     index=To.index)
@@ -116,9 +97,25 @@ Ti_sp = pd.Series(
 # auxiliary (internal) sources
 Qa = 0 * np.ones(weather.shape[0])
 
-# Input data set
+wall_ids= wall_labels=wall_out['ID'].tolist()
+plt.figure(figsize=(10, 6))
+
+for i, wall_id in enumerate(wall_ids):
+    plt.plot(absorbed_radiation[wall_id], label=wall_labels[i])
+plt.plot(Φo, label='Φo (outside walls)')
+plt.plot(Φi, label='Φi (inside walls)')
+plt.plot(Etot,label='Etot')
+
+plt.title('Absorbed Solar Radiation')
+plt.xlabel('Time')
+plt.ylabel('Absorbed Solar Radiation (W)')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+#Input data set
 input_data_set = pd.DataFrame({'To': To, 'Ti_sp': Ti_sp,
                                'Φo': Φo, 'Φi': Φi, 'Qa': Qa, 'Φa': Φa,
-                               'Etot': Etot})
+                               'Etot': E})
 
-input_data_set.to_csv('input_data_set.csv')
+#input_data_set.to_csv('input_data_set.csv')
