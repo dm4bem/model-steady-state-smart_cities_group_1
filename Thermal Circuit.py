@@ -2,7 +2,6 @@
 Change: -ACH (air chainges per hour)
         -Tm (mean Temperature for radiation)
         -To, Ti_sp
-
 Need to save TC as .csv like in inputs?
 """
 
@@ -11,7 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import dm4bem
 
-l = 3               # m length of the cubic room
+from Inputs import l
+from Inputs import Ti_sp_ss as Ti_sp
 Sg = l**2           # m² surface area of the glass wall
 Sc = Si = 5 * Sg    # m² surface area of concrete & insulation of the 5 walls
 
@@ -23,19 +23,19 @@ concrete    = {'Conductivity': 1.400,            # W/(m·K)
                'Density': 2300.0,                # kg/m³
                'Specific heat': 880,             # J/(kg⋅K)
                'Width': 0.2,                     # m
-               'Surface': 5 * l**2}              # m²
+               'Surface': Sc}                    # m²
 
 insulation  = {'Conductivity': 0.027,            # W/(m·K)
               'Density': 55.0,                   # kg/m³
               'Specific heat': 1210,             # J/(kg⋅K)
               'Width': 0.08,                     # m
-              'Surface': 5 * l**2}               # m²
+              'Surface': Si}               # m²
 
 glass       = {'Conductivity': 1.4,              # W/(m·K)
                'Density': 2500,                  # kg/m³
                'Specific heat': 1210,            # J/(kg⋅K)
                'Width': 0.04,                    # m
-               'Surface': l**2}                  # m²
+               'Surface': Sg}                    # m²
 
 pd.DataFrame(air, index=['Air'])
 wall = pd.DataFrame.from_dict({'Layer_out': concrete,
@@ -85,7 +85,7 @@ print(f'For (T/K - 273.15)°C = 20°C, 4σT³ = {4 * σ * T_int**3:.1f} W/(m²·
 """
 
 # long wave radiation
-Tm = 20 + 273.15   # K, mean temp for radiative exchange
+Tm = Ti_sp + 273.15   # K, mean temp for radiative exchange
 
 GLW1  = 4 * σ * Tm**3 * ε_wLW / (1 - ε_wLW) *   wall['Surface']['Layer_in']
 GLW12 = 4 * σ * Tm**3 * Fwg                 *   wall['Surface']['Layer_in']
@@ -96,17 +96,18 @@ GLW = 1 / (1 / GLW1 + 1 / GLW12 + 1 / GLW2) #conductance for radiative long-wave
 ## Advection
 
 # ventilation flow rate
+from Inputs import ACH
 Va = l**3                   # m³, volume of air
-ACH = 1                     # 1/h, air changes per hour
-Va_dot = ACH / 3600 * Va    # m³/s, air infiltration
+    Va_dot = ACH / 3600 * Va    # m³/s, air infiltration
 
 # ventilation & advection
-Gv = air['Density'] * air['Specific heat'] * Va_dot     #conductance for advection by ventilation/infiltration
+Gv = air['Density'] * air['Specific heat'] * Va_dot  #conductance for advection by ventilation/infiltration
 
-# P-controler gain
-# Kp = 1e4          # almost perfect controller Kp -> ∞
-# Kp = 1e-3         # no controller Kp -> 0
-Kp = 0              #to be set later 
+# P-controler gain          
+from Inputs import controller
+if controller:  
+    Kp = 1e3        # Kp -> ∞, almost perfect controller
+else: Kp=0
 
 ## Conductances in series and/or parallel
 # glass: convection outdoor & conduction
@@ -164,9 +165,8 @@ pd.DataFrame(G, index=q)
 
 
 #capacity matrix
-neglect_air_glass = False
-
-if neglect_air_glass:
+from Inputs import neglect_air_glass_capacity
+if neglect_air_glass_capacity:
     C = np.array([0, C['Layer_out'], 0, C['Layer_in'], 0, 0,
                   0, 0])
 else:
@@ -183,11 +183,11 @@ b = pd.Series(['To', 0, 0, 0, 0, 0, 0, 0, 'To', 0, 'To', 'Ti_sp'],
 #heat flow source vector
 f = pd.Series(['Φo', 0, 0, 0, 'Φi', 0, 'Qa', 'Φa'],     #Φo: solar radiation absorbed by the outdoor surface of the wall
               index=θ)                                  #Φi: solar radiation absorbed by the indoor surface of the wall
-                                                        #Qa: heat source inside     
-                                                        #Φa: solar radiation absorbed by the glass
+                                                        #Φa: solar radiation absorbed by the window
+                                                        #Qa: heat source inside
 #output vector
-y = np.zeros(8)         # nodes
-y[[6]] = 1              # nodes (temperatures) of interest
+y = np.zeros(8)           # nodes 
+y = np.ones(8)            # nodes (temperatures) of interest
 pd.DataFrame(y, index=θ)
 
 # thermal circuit
@@ -204,9 +204,4 @@ TC = {"A": A,
       "b": b,
       "f": f,
       "y": y}
-
-# TC['G']['q11'] = 1e3  # Kp -> ∞, almost perfect controller
-TC['G']['q11'] = 0      # Kp -> 0, no controller (free-floating)
-
-print(TC)
 
