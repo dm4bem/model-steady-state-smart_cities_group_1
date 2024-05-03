@@ -4,26 +4,20 @@ import matplotlib.pyplot as plt
 
 import dm4bem
 
-controller = True
-Kp = 1e3
-explicit_Euler = True
-imposed_time_step = False
-Δt = 3600    # s, imposed time step   
+explicit_Euler      = True
+imposed_time_step   = False
+Δt = 3600           # s, imposed time step   
+from Inputs import θ0 
 
 # MODEL
 # =====
 # Thermal circuits
-TC = dm4bem.file2TC('TC.csv', name='', auto_number=False)
-
-# by default TC['G']['q11'] = 0 # Kp -> 0, no controller (free-floating
-if controller:
-    TC['G']['q11'] = Kp     # Kp -> ∞, almost perfect controller
+#TC = dm4bem.file2TC('TC.csv', name='', auto_number=False)
+from Thermal_Circuit import TC
 
 # State-space
 [As, Bs, Cs, Ds, us] = dm4bem.tc2ss(TC)
-dm4bem.print_TC(TC)
-
-
+#dm4bem.print_TC(TC)
 
 λ = np.linalg.eig(As)[0]    # eigenvalues of matrix As
 dtmax = 2 * min(-1. / λ)    # max time step for Euler explicit stability
@@ -31,15 +25,10 @@ dt = dm4bem.round_time(dtmax)
 
 if imposed_time_step:
     dt = Δt
-
-dm4bem.print_rounded_time('dt', dt)
+#dm4bem.print_rounded_time('dt', dt)
 
 # INPUT DATA SET
-# ==============
-input_data_set = pd.read_csv('input_data_set.csv',
-                             index_col=0,
-                             parse_dates=True)
-input_data_set
+from Inputs import input_data_set
 
 input_data_set = input_data_set.resample(
     str(dt) + 'S').interpolate(method='linear')
@@ -50,7 +39,6 @@ u = dm4bem.inputs_in_time(us, input_data_set)
 u.head()
 
 # Initial conditions
-θ0 = 20                     # °C, initial temperatures
 θ = pd.DataFrame(index=u.index)
 θ[As.columns] = θ0          # fill θ with initial valeus θ0
 
@@ -83,9 +71,8 @@ t = dt * np.arange(data.shape[0])   # time vector
 fig, axs = plt.subplots(2, 1)
 # plot outdoor and indoor temperature
 axs[0].plot(t / 3600 / 24, data['To'], label='$θ_{outdoor}$')
-axs[0].plot(t / 3600 / 24, y.values, label='$θ_{indoor}$')
+axs[0].plot(t / 3600 / 24, y['θ6'].values, label='$θ_{indoor}$')
 axs[0].plot(t / 3600 / 24, input_data_set['Ti_sp'], label='Ti_Sp')
-
 axs[0].set(ylabel='Temperatures, $θ$ / °C',
            title='Simulation for weather')
 axs[0].legend(loc='upper right')
