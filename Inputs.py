@@ -13,7 +13,7 @@ l = 3               # m length of the cubic room
 # end_date   = '2000-03-31 00:00:00'
 
 start_date = '2000-01-01 00:00:00'
-end_date   = '2000-01-01 10:00:00'
+end_date   = '2000-03-01 00:00:00'
 
 controller= True
 neglect_air_glass_capacity = False
@@ -103,41 +103,41 @@ input_data_set = pd.DataFrame({'To': To, 'Ti_sp': Ti_sp,
                                'Etot': Etot})
 
 """"daily"""
-# plt.figure(figsize=(10, 6))
-# #plt.title('Absorbed Solar Radiation')
+plt.figure(figsize=(10, 6))
+plt.title('Absorbed Solar Radiation')
 
-# wall_ids= wall_labels=wall_out['ID'].tolist()
+wall_ids= wall_labels=wall_out['ID'].tolist()
 
-# for i, wall_id in enumerate(wall_ids):
-#     plt.plot(absorbed_radiation[wall_id], label=wall_labels[i])
+for i, wall_id in enumerate(wall_ids):
+    plt.plot(absorbed_radiation[wall_id], label=wall_labels[i])
     
-# plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=1))
-# plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=1))
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
 
-# plt.plot(Etot,label='Etot (W/m^2)')
-# plt.plot(Φo, label='Φo (outside walls)')
-# plt.plot(Φi, label='Φi (inside walls)')
+plt.plot(Etot,label='Etot (W/m^2)')
+plt.plot(Φo, label='Φo (outside walls)')
+plt.plot(Φi, label='Φi (inside walls)')
 
-# plt.xlabel('Time')
-# plt.ylabel('Absorbed Solar Radiation (W)')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-# ######################################
-# plt.figure(figsize=(10, 6))
-
-
-# plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=1))
-# plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-
-# plt.plot(To,label='Outside Temperatur')
+plt.xlabel('Time')
+plt.ylabel('Absorbed Solar Radiation (W)')
+plt.legend()
+plt.grid(True)
+plt.show()
+######################################
+plt.figure(figsize=(10, 6))
 
 
-# plt.xlabel('Time')
-# plt.ylabel('Temperature (°C)')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
+plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=1))
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+
+plt.plot(To,label='Outside Temperatur')
+
+
+plt.xlabel('Time')
+plt.ylabel('Temperature (°C)')
+plt.legend()
+plt.grid(True)
+plt.show()
 
 """"monthly"""
 # plt.figure(figsize=(10, 6))
