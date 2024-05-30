@@ -42,6 +42,7 @@ diag_G = pd.DataFrame(np.diag(G), index=G.index, columns=G.index)
 
 θss = np.linalg.inv(A.T @ diag_G @ A) @ (A.T @ diag_G @ bss + fss)
 qss = np.diag(G) @ (-A @ θss + bss)
+print("---Steady state---")
 
 print(f"inside Temperature(steady state): {np.around(yss['θ6'],2)} °C")
 print(f'Temperature in nodes(DAE, θss):\n{np.around(θss,2)}')
@@ -74,10 +75,11 @@ t_settle = 4 * max(-1 / λ)
 # duration: next multiple of 3600 s that is larger than t_settle
 duration = np.ceil(t_settle/ 3600) * 3600
 
-# dm4bem.print_rounded_time('dtmax', dtmax)
-# dm4bem.print_rounded_time('dt', dt)
-# dm4bem.print_rounded_time('t_settle', t_settle)
-# dm4bem.print_rounded_time('duration', duration)
+print("---Step response---")
+dm4bem.print_rounded_time('dtmax', dtmax)
+dm4bem.print_rounded_time('dt', dt)
+dm4bem.print_rounded_time('t_settle', t_settle)
+dm4bem.print_rounded_time('duration', duration)
 
 
 """ Create input_data_set"""
