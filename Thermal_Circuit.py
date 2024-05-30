@@ -37,8 +37,8 @@ glass       = {'Conductivity': 1.4,              # W/(m·K)
                'Surface': Sg}                    # m²
 
 pd.DataFrame(air, index=['Air'])
-wall = pd.DataFrame.from_dict({'Layer_out': insulation,
-                               'Layer_in': concrete,
+wall = pd.DataFrame.from_dict({'Layer_out': concrete,
+                               'Layer_in': insulation,
                                'Glass': glass},
                               orient='index')
 
