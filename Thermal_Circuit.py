@@ -1,10 +1,3 @@
-"""
-Change: -ACH (air chainges per hour)
-        -Tm (mean Temperature for radiation)
-        -To, Ti_sp
-Need to save TC as .csv like in inputs?
-"""
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
