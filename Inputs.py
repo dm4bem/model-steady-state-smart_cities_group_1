@@ -13,7 +13,7 @@ l = 3               # m length of the cubic room
 # end_date   = '2000-03-31 00:00:00'
 
 start_date = '2000-01-01 00:00:00'
-end_date   = '2000-03-01 00:00:00'
+end_date   = '2000-01-03 00:00:00'
 
 controller= True
 neglect_air_glass_capacity = False
